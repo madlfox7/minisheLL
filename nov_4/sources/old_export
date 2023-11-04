@@ -1,0 +1,322 @@
+#include "lib_for_minishell.h"
+
+
+void unset(t_environment_list **head, const char *name)
+{
+    if (*head == NULL) 
+        return;
+    if (strcmp((*head)->name_and_value[0], name) == 0)
+    {
+        t_environment_list *temp = *head;
+        *head = (*head)->next;
+        free(temp->name_and_value[0]);
+        free(temp->name_and_value[1]);
+        free(temp->name_and_value);
+        free(temp);
+        return;
+    } 
+    t_environment_list *current = *head;
+    t_environment_list *prev = NULL;
+    while (current != NULL)
+    {
+        if (strcmp(current->name_and_value[0], name) == 0)
+        {
+            prev->next = current->next;
+            free(current->name_and_value[0]);
+            free(current->name_and_value[1]);
+            free(current->name_and_value);
+            free(current);
+            return;
+        }
+        prev = current;
+        current = current->next;
+    }
+}
+
+fft_strc
+void export(t_environment_list **head, const char *name, const char *value)
+{
+    if (*head == NULL)
+    {
+        t_environment_list *new_node = (t_environment_list *)malloc(sizeof(t_environment_list));
+        if (new_node == NULL) {
+            perror("Memory allocation failed");
+            exit(1);
+        }
+        new_node->name_and_value = (char **)malloc(2 * sizeof(char *));
+        if (new_node->name_and_value == NULL) {
+            perror("Memory allocation failed");
+            exit(1);
+        }
+        new_node->name_and_value[0] = strdup(name);
+        new_node->name_and_value[1] = strdup(value);
+        new_node->next = NULL;
+        *head = new_node;
+    } 
+    else {
+        t_environment_list *current = *head;
+        while (current != NULL) {
+            if (strcmp(current->name_and_value[0], name) == 0) {   
+                free(current->name_and_value[1]);
+                current->name_and_value[1] = strdup(value);
+                return;
+            }
+            current = current->next;
+        }
+        t_environment_list *new_node = (t_environment_list *)malloc(sizeof(t_environment_list));
+        if (new_node == NULL) {
+            perror("Memory allocation failed");
+            exit(1);
+        }  
+        new_node->name_and_value = (char **)malloc(2 * sizeof(char *));
+        if (new_node->name_and_value == NULL) {
+            perror("Memory allocation failed");
+            exit(1);
+        }  
+        new_node->name_and_value[0] = strdup(name);
+        new_node->name_and_value[1] = strdup(value);
+        new_node->next = NULL; 
+        current = *head;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = new_node;
+    }
+}
+
+
+
+char    *ft_strcpy(char *s1, char *s2)
+  {
+      int i;
+ 
+      i = 0;
+      if (!s1 || !(*s1) || !s2 || !(*s2))
+        return NULL;
+      while (s2[i])
+      {
+          s1[i] = s2[i];
+          i++;
+      }
+      s1[i] = s2[i];  
+      return (s1);
+  }
+
+
+int ft_strcmp(char *s1, char *s2)
+{
+	int	i;
+
+	i = 0;
+    if (!s1 || !(*s1) || !s2 || !(*s2))
+        return -90;
+	while (s1[i] != '\0')
+	{
+		if ((s1[i] - s2[i]) == 0)
+			i++;
+		else
+			return (s1[i] - s2[i]);
+	}
+	return (0);
+}
+
+
+
+void sort_env_list(t_environment_list *head)
+{
+    int swapped = 1;  
+    t_environment_list *ptr1;
+    t_environment_list *lptr = NULL;
+
+    if (head == NULL)
+        return;
+    while (swapped)
+    {
+        swapped = 0;
+        ptr1 = head;
+        while (ptr1->next != lptr) //alphabet order
+        {
+            if (ft_strcmp(ptr1->name_and_value[0], ptr1->next->name_and_value[0]) > 0)
+            {
+                char **temp = ptr1->name_and_value;
+                ptr1->name_and_value = ptr1->next->name_and_value;
+                ptr1->next->name_and_value = temp;
+                swapped = 1;
+            }
+            ptr1 = ptr1->next;
+        }
+        lptr = ptr1;
+    }
+}
+
+
+
+
+
+void print_env_sorted(t_environment_list *envp) // for export without options 
+{
+    t_environment_list *env = envp;
+    sort_env_list(env);
+
+    t_environment_list *current = env;
+    while (current != NULL)
+    {
+        printf("declare -x %s=\"%s\"\n", current->name_and_value[0], current->name_and_value[1]);
+        current = current->next;
+    }
+}
+
+
+int get_array_size(char **arr)
+{
+    int count = 0;
+    while (arr[count] != NULL) 
+        count++;
+    return count;
+}
+
+// copy env list
+t_environment_list* copy_environment_list(t_environment_list *head) // miguce aveli lav zev ka copy anelu and freen chmoranal
+{
+    if (head == NULL) 
+        return NULL;
+    t_environment_list* new_head = NULL;
+    t_environment_list* tail = NULL;
+
+    while (head != NULL)
+    {
+        int array_size = get_array_size(head->name_and_value);
+        t_environment_list* new_node = (t_environment_list*)malloc(sizeof(t_environment_list));
+        if (new_node == NULL) 
+            return NULL;
+        new_node->name_and_value = (char**)malloc((array_size + 1) * sizeof(char*)); // +1 for NULLik
+        for (int i = 0; i < array_size; i++)
+        {
+            int string_length = ft_strlen(head->name_and_value[i]) + 1;
+            new_node->name_and_value[i] = (char*)malloc(string_length * sizeof(char));
+            strcpy(new_node->name_and_value[i], head->name_and_value[i]);
+        }
+        new_node->name_and_value[array_size] = NULL; 
+        new_node->next = NULL;
+        if (new_head == NULL)
+        {
+            new_head = new_node;
+            tail = new_node;
+        }
+        else
+        {
+            tail->next = new_node;
+            tail = new_node;
+        }
+        head = head->next;
+    }
+    return new_head;
+}
+
+
+
+
+void print_env_export(t_environment_list *copied_list) //sort and print list
+{
+    
+    print_env_sorted(copied_list); 
+
+    // old env not sorted alphabetically
+    //  t_environment_list *current = env;
+    // while (current != NULL)
+    // {
+        
+    //    // printf("declare -x %s="%s"\n", current->name_and_value[0], current->name_and_value[1]);
+    //     current = current->next;
+    // }
+}
+
+
+
+
+//change functions
+#include <string.h>
+
+
+void extractNameAndValue(const char *String, char *name, char *value)
+{
+    char *equalSignPos = strchr(String, '=');
+    if (equalSignPos != NULL)
+    {
+        int nameLength = equalSignPos - String;
+        int valueLength = strlen(String) - nameLength - 1;
+        strncpy(name, String, nameLength);
+        name[nameLength] = '\0';
+        strncpy(value, equalSignPos + 1, valueLength);
+        value[valueLength] = '\0';
+    }
+    else
+    {
+        strcpy(name, "");
+        strcpy(value, "");
+    }
+}
+
+void ft_export(char **str, t_environment_list *envp)
+{
+    int i = 0;
+  
+    if (!streq(str[i], "export") || !str || !(*str)) //if not export 
+        return ;
+
+
+     t_environment_list* copied_list_export_no_arg = copy_environment_list(envp); // otherwise it will modify originl env, saving copy of list for export with no args
+     if (!copied_list_no_arg)   //????????????????????/// 
+        return ;
+     // if only export print env and declare -x before each line...
+    if (!str[1] || !(*str[1]))
+    {
+        print_env_export(copied_list_export_no_arg);  //if export without args
+        return ;
+    }
+
+    while (str[i])
+    {
+        if (i == 0 && streq(str[i], "export")) //skip first export
+            i++;
+        if (!str[i]) 
+            break ;
+        else
+        {
+               if (ft_strchr(str[i], '=') == NULL || str[i][0] == '=') //ete havasar chka kam skzuma zroyov; export chanel
+               {
+                    printf("Don't export this '%s'\n\n", str[i]);
+                    break ;
+               }
+               else  // ete normal export bana
+                    {
+                            char *name = malloc(1);
+                            char *value = malloc(1);
+
+                            extractNameAndValue(str[i], name, value);
+                
+                           t_environment_list *current = envp;  
+                        while (current != NULL)   //iterate env list and find name to 
+                        {
+                                if (!name)
+                                    break;
+                                if (streq(current->name_and_value[0], name))
+                                {
+                                    current->name_and_value[1]=ft_strdup(value); //changing name that already has a value and in envp
+                                }
+                                else //if arg is not in env lst_add_back arg
+                                {
+                                        export(&envp, name, value); //ete chka stexcel nory listi verjic karoxa lst_add_back anel? chgitem
+                                }
+                                    printf("%s=%s\n", current->name_and_value[0], current->name_and_value[1]);
+                                current = current->next;
+                        }
+                      free(name);
+                      free(value);
+                    }
+             i++;
+        }
+    }
+    copied_list_export_no_arg = copy_environment_list(envp);
+    //print_env(envp);
+}
